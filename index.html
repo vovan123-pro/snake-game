@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Змейка 🍎</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* Разноцветный анимированный градиент */
+            background: linear-gradient(-45deg, 
+                #ff9a9e, #fad0c4, #fad0c4, #ff9a9e,
+                #a18cd1, #fbc2eb, #a8edea, #fed6e3);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            font-family: 'Arial', sans-serif;
+            touch-action: pan-y pinch-zoom;
+        }
+        
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 100%;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        
+        canvas {
+            border: 3px solid #333;
+            border-radius: 20px;
+            background: #111;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            width: 100%;
+            height: auto;
+            touch-action: none;
+            transition: all 0.3s ease;
+        }
+        
+        .score {
+            font-size: 28px;
+            margin: 10px 0;
+            color: #333;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.5);
+        }
+        
+        .size-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .size-btn {
+            background: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+        }
+        
+        .size-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        .size-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: white;
+        }
+        
+        .size-btn[data-size="small"] { background: #ff6b6b; color: white; }
+        .size-btn[data-size="medium"] { background: #4ecdc4; color: white; }
+        .size-btn[data-size="large"] { background: #45b7d1; color: white; }
+        
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.95);
+        }
+        
+        .controls {
+            color: #333;
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .swipe-hint {
+            background: rgba(255,255,255,0.3);
+            padding: 10px;
+            border-radius: 20px;
+            margin-top: 10px;
+            color: #333;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+        }
+        
+        .current-size {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        @media (max-width: 500px) {
+            .game-container {
+                padding: 15px;
+            }
+            
+            .score {
+                font-size: 24px;
+            }
+            
+            .size-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            button {
+                padding: 12px 30px;
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🐍 Змейка 🍎</h1>
+        <div class="score">🍎 <span id="score">0</span></div>
+        
+        <!-- Выбор размера карты -->
+        <div class="size-selector">
+            <button class="size-btn" data-size="small" onclick="setMapSize('small')">📱 Маленькая</button>
+            <button class="size-btn active" data-size="medium" onclick="setMapSize('medium')">📲 Средняя</button>
+            <button class="size-btn" data-size="large" onclick="setMapSize('large')">🖥️ Большая</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <br>
+        <button onclick="resetGame()">🔄 Новая игра</button>
+        <div class="controls">👆 Свайпы | Клавиши ←↑→↓</div>
+        <div class="swipe-hint">
+            🍎 Собирай яблочки!
+        </div>
+        <div class="current-size" id="sizeDisplay">Текущий размер: Средний (400x400)</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        
+        // Размеры карты
+        const mapSizes = {
+            small: { width: 300, height: 300, name: 'Маленький (300x300)' },
+            medium: { width: 400, height: 400, name: 'Средний (400x400)' },
+            large: { width: 600, height: 600, name: 'Большой (600x600)' }
+        };
+        
+        // Текущий размер
+        let currentSize = 'medium';
+        let gridSize = 20;
+        let tileCount;
+        let snake, direction, nextDirection, food, score, gameRunning;
+        
+        // Для управления
+        let keyPressed = false; // Предотвращает множественные нажатия
+        let lastDirection = {x: 1, y: 0};
+        
+        // Для свайпов
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 30;
+        
+        // Инициализация игры
+        function initGame() {
+            const size = mapSizes[currentSize];
+            canvas.width = size.width;
+            canvas.height = size.height;
+            tileCount = canvas.width / gridSize;
+            
+            // Начальная позиция змейки (центр)
+            const centerX = Math.floor(tileCount / 2);
+            const centerY = Math.floor(tileCount / 2);
+            
+            snake = [
+                {x: centerX, y: centerY},
+                {x: centerX - 1, y: centerY},
+                {x: centerX - 2, y: centerY}
+            ];
+            direction = {x: 1, y: 0};
+            nextDirection = {x: 1, y: 0};
+            lastDirection = {x: 1, y: 0};
+            score = 0;
+            gameRunning = true;
+            keyPressed = false;
+            scoreElement.textContent = score;
+            sizeDisplay.textContent = `Текущий размер: ${size.name}`;
+            
+            // Обновляем активную кнопку
+            document.querySelectorAll('.size-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.size === currentSize) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            createFood();
+        }
+        
+        // Смена размера карты
+        window.setMapSize = function(size) {
+            currentSize = size;
+            initGame();
+        };
+        
+        // Создание еды (яблочка)
+        function createFood() {
+            let validPosition = false;
+            let attempts = 0;
+            const maxAttempts = 1000;
+            
+            while (!validPosition && attempts < maxAttempts) {
+                food = {
+                    x: Math.floor(Math.random() * tileCount),
+                    y: Math.floor(Math.random() * tileCount)
+                };
+                
+                validPosition = true;
+                for (let segment of snake) {
+                    if (segment.x === food.x && segment.y === food.y) {
+                        validPosition = false;
+                        break;
+                    }
+                }
+                attempts++;
+            }
+        }
+        
+        // Обработка клавиш (исправлено для устранения задержки)
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            
+            if (key.startsWith('Arrow')) {
+                event.preventDefault();
+            }
+            
+            // Предотвращаем множественные нажатия за один тик
+            if (keyPressed) return;
+            
+            let newDir = null;
+            
+            if (key === 'ArrowUp' && direction.y === 0) {
+                newDir = {x: 0, y: -1};
+            } else if (key === 'ArrowDown' && direction.y === 0) {
+                newDir = {x: 0, y: 1};
+            } else if (key === 'ArrowLeft' && direction.x === 0) {
+                newDir = {x: -1, y: 0};
+            } else if (key === 'ArrowRight' && direction.x === 0) {
+                newDir = {x: 1, y: 0};
+            }
+            
+            if (newDir) {
+                nextDirection = newDir;
+                keyPressed = true;
+            }
+        });
+        
+        // Сбрасываем флаг нажатия после обработки
+        function resetKeyPress() {
+            keyPressed = false;
+        }
+        
+        // Обработка касаний
+        canvas.addEventListener('touchstart', (event) => {
+            event.preventDefault();
+            const touch = event.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }, {passive: false});
+        
+        canvas.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+        }, {passive: false});
+        
+        canvas.addEventListener('touchend', (event) => {
+            event.preventDefault();
+            
+            if (!gameRunning) return;
+            
+            const touch = event.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchEndY = touch.clientY;
+            
+            calculateSwipe();
+        }, {passive: false});
+        
+        function calculateSwipe() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            if (Math.abs(deltaX) < minSwipeDistance && Math.abs(deltaY) < minSwipeDistance) {
+                return;
+            }
+            
+            let newDir = null;
+            
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                if (deltaX > 0 && direction.x === 0) {
+                    newDir = {x: 1, y: 0};
+                } else if (deltaX < 0 && direction.x === 0) {
+                    newDir = {x: -1, y: 0};
+                }
+            } else {
+                if (deltaY > 0 && direction.y === 0) {
+                    newDir = {x: 0, y: 1};
+                } else if (deltaY < 0 && direction.y === 0) {
+                    newDir = {x: 0, y: -1};
+                }
+            }
+            
+            if (newDir) {
+                nextDirection = newDir;
+            }
+        }
+        
+        function update() {
+            if (!gameRunning) return;
+            
+            // Применяем новое направление
+            direction = {...nextDirection};
+            
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+            
+            // Проверка на стены
+            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount) {
+                gameRunning = false;
+                return;
+            }
+            
+            // Проверка на себя
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    gameRunning = false;
+                    return;
+                }
+            }
+            
+            snake.unshift(head);
+            
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreElement.textContent = score;
+                createFood();
+            } else {
+                snake.pop();
+            }
+            
+            // Сбрасываем флаг нажатия клавиши
+            resetKeyPress();
+        }
+        
+        function drawApple(x, y, size) {
+            const cellX = x * gridSize;
+            const cellY = y * gridSize;
+            const appleSize = gridSize - 4;
+            
+            // Яблочко (красное с градиентом)
+            const appleGradient = ctx.createRadialGradient(
+                cellX + 8, cellY + 8, 2,
+                cellX + 12, cellY + 12, appleSize/2
+            );
+            appleGradient.addColorStop(0, '#ff4d4d');
+            appleGradient.addColorStop(0.7, '#cc0000');
+            appleGradient.addColorStop(1, '#990000');
+            
+            // Рисуем яблоко
+            ctx.beginPath();
+            ctx.ellipse(cellX + gridSize/2, cellY + gridSize/2 - 1, appleSize/2.5, appleSize/2, 0, 0, Math.PI * 2);
+            ctx.fillStyle = appleGradient;
+            ctx.shadowColor = '#ff6666';
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            
+            // Блики на яблоке
+            ctx.shadowBlur = 5;
+            ctx.beginPath();
+            ctx.ellipse(cellX + 8, cellY + 8, 2, 3, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fill();
+            
+            // Хвостик (коричневый)
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(cellX + gridSize/2 - 2, cellY + 2);
+            ctx.lineTo(cellX + gridSize/2, cellY - 2);
+            ctx.lineTo(cellX + gridSize/2 + 4, cellY + 3);
+            ctx.fillStyle = '#8B4513';
+            ctx.fill();
+            
+            // Листик (зеленый)
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = '#99ff99';
+            ctx.beginPath();
+            ctx.ellipse(cellX + gridSize/2 + 2, cellY - 1, 3, 2, 0.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#4CAF50';
+            ctx.fill();
+            
+            // Прожилка на листике
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.moveTo(cellX + gridSize/2 + 1, cellY - 1);
+            ctx.lineTo(cellX + gridSize/2 + 4, cellY - 2);
+            ctx.strokeStyle = '#2E7D32';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        
+        function draw() {
+            // Очистка canvas
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем сетку
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= tileCount; i++) {
+                ctx.beginPath();
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 1;
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+            
+            // Рисуем яблочко
+            drawApple(food.x, food.y, gridSize);
+            
+            // Рисуем змейку
+            for (let i = 0; i < snake.length; i++) {
+                const segment = snake[i];
+                
+                // Разноцветный градиент для змейки
+                const gradient = ctx.createLinearGradient(
+                    segment.x * gridSize, 
+                    segment.y * gridSize,
+                    segment.x * gridSize + gridSize, 
+                    segment.y * gridSize + gridSize
+                );
+                
+                // Цвета меняются в зависимости от позиции
+                const hue = (i * 10 + Date.now() * 0.01) % 360;
+                gradient.addColorStop(0, `hsl(${hue}, 100%, 60%)`);
+                gradient.addColorStop(1, `hsl(${hue + 60}, 100%, 50%)`);
+                
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+                ctx.shadowBlur = 10;
+                
+                // Глазки у головы
+                if (i === 0) {
+                    // Тело головы
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        segment.x * gridSize + 2, 
+                        segment.y * gridSize + 2, 
+                        gridSize - 4, 
+                        gridSize - 4, 
+                        5
+                    );
+                    ctx.fill();
+                    
+                    // Глазки
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + 6, segment.y * gridSize + 8, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + 14, segment.y * gridSize + 8, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Зрачки
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + 7, segment.y * gridSize + 8, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(segment.x * gridSize + 15, segment.y * gridSize + 8, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Тело
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        segment.x * gridSize + 2, 
+                        segment.y * gridSize + 2, 
+                        gridSize - 4, 
+                        gridSize - 4, 
+                        5
+                    );
+                    ctx.fill();
+                }
+            }
+            
+            ctx.shadowBlur = 0;
+            
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = 'white';
+                ctx.font = `${Math.min(30, canvas.width/10)}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText('Game Over!', canvas.width/2, canvas.height/2);
+                ctx.font = `${Math.min(20, canvas.width/15)}px Arial`;
+                ctx.fillText(`Собрано яблок: ${score/10}`, canvas.width/2, canvas.height/2 + 40);
+            }
+        }
+        
+        // Вспомогательная функция для рисования закругленных прямоугольников
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            this.closePath();
+            return this;
+        };
+        
+        function gameLoop() {
+            update();
+            draw();
+            setTimeout(gameLoop, 150);
+        }
+        
+        function resetGame() {
+            initGame();
+        }
+        
+        // Инициализация и запуск
+        initGame();
+        gameLoop();
+        
+        // Предотвращаем скролл стрелками
+        window.addEventListener('keydown', function(e) {
+            if (e.key.startsWith('Arrow')) {
+                e.preventDefault();
+            }
+        }, {passive: false});
+        
+        // Предотвращаем зум
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+    </script>
+</body>
+</html>
